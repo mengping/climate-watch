@@ -69,13 +69,12 @@ module Api
 
         sectors = Rails.cache.fetch(sectors_cache_key, expires: 7.days) do
           tmp_sectors = ::Indc::Sector.joins(values: :indicator).
-            where(indc_indicators: {id: indicators.map(&:id)})
+            where(indc_indicators: {id: indicators.map(&:id)}).distinct
 
           parents = ::Indc::Sector.where(parent_id: nil).
             joins("INNER JOIN indc_sectors AS children ON children.parent_id = indc_sectors.id").where(children: {id: tmp_sectors.pluck(:id).uniq})
 
-          ::Indc::Sector.from("(#{tmp_sectors.to_sql} UNION #{parents.to_sql}) AS indc_sectors").
-            includes(values: :indicator)
+          ::Indc::Sector.from("(#{tmp_sectors.to_sql} UNION #{parents.to_sql}) AS indc_sectors")
         end
 
         render json: NdcIndicators.new(indicators, categories, sectors),
@@ -99,10 +98,15 @@ module Api
           ).
           order('indc_indicators.name')
 
-        if params[:document]
-          values = values.joins(:document).
-            where(indc_documents: {slug: [params[:document], nil]})
-        end
+        docs = [nil]
+        docs += if params[:document].present?
+                [params[:document]]
+              else
+                location.documents.where(is_ndc: true).order(ordering: :desc).
+                  limit(1).pluck(:slug)
+              end
+
+        values = values.joins(:document).where(indc_documents: {slug: docs})
 
         if SECTORS_INDICATORS.present?
           sectors = ::Indc::Indicator.
@@ -111,10 +115,8 @@ module Api
             where(indc_values: {location_id: location.id}).
             where.not(indc_values: {value: "No specified measure"})
 
-          if params[:document]
-            sectors = sectors.joins(values: :document).
-              where(indc_documents: {slug: [params[:document], nil]})
-          end
+          sectors = sectors.joins(values: :document).where(indc_documents: {slug: docs})
+
           sectors = sectors.order('indc_indicators.name').pluck(:name)
         end
 
@@ -190,16 +192,14 @@ module Api
       end
 
       def filtered_indicators(source=nil)
-        indicators = ::Indc::Indicator.includes(:labels, :source, :categories,
-                                                values: [:sector, :label, :location,
-                                                         :document])
+        indicators = ::Indc::Indicator.includes(:labels, :source, :categories)
 
         if location_list
-          indicators = indicators.where(values: {locations: {iso_code3: location_list}})
+          indicators = indicators.joins(values: [:location]).where(values: {locations: {iso_code3: location_list}})
         end
 
         if params[:document].present?
-          indicators = indicators.where(values: {indc_documents: {slug: [params[:document], nil]}})
+          indicators = indicators.joins(values: [:document]).where(values: {indc_documents: {slug: [params[:document], nil]}})
         end
 
         indicators = indicators.where(source_id: source.map(&:id)) if source
@@ -257,8 +257,9 @@ module Api
         end
 
         if @indc_locations_documents
-          categories = categories.joins(indicators: {values: :document}).
-            where(indc_documents: {slug: @indc_locations_documents.map(&:second)})
+          categories = categories.joins(indicators: {values: [:document, :location]}).
+            where(indc_documents: {slug: @indc_locations_documents.map(&:second)}).
+            where(locations: {iso_code3: @indc_locations_documents.map(&:first)})
         end
         categories
       end
