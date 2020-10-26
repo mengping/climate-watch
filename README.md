@@ -55,12 +55,17 @@ These will satisfy both the frontend and backend's dependency requirements.
 #### Setting up the Rails environment
 
 Copy the sample `.env.sample` file to `.env` and modify it as needed to fit the
-project's settings. At the very least you'll need to have the `POSTGRES_URL` and `SHARED_POSTGRES_URL`
-env variable.
+project's settings. At the very least you'll need to have the `POSTGRES_URL` env variable.
 
 ```
 POSTGRES_URL=postgresql://postgres@localhost/climate-watch_development
-SHARED_POSTGRES_URL=postgresql://postgres@localhost/climate-watch-shared_development
+CW_API=https://climate-watch.vizzuality.com/api/v1/
+ESP_API=https://data.emissionspathways.org/api/v1
+GFW_API=https://staging-api.globalforestwatch.org
+DEV_USER_ID=DEV_USER_ID_PLACEHOLDER
+DEV_USER_TOKEN=DEV_USER_TOKEN_PLACEHOLDER
+APP_NAME=global_cw_platform
+CW_FILES_PREFIX=climatewatch.org/staging.climatewatch.org/climate-watch/
 ```
 
 #### Setting up the database
@@ -103,12 +108,12 @@ The fronted uses react, redux and react-router.
 There are some peculiarities in the architectural choices that we will outline in this section.
 
 ## Router
-The router version used in the project is `v.4.1.1`.
 
 - routes are defined as a data-structure instead of using `jsx` inside the `routes.js` file.
 - Instead of connecting the routes to the reducer via middleware we decided to use `withRouter` [HOC](https://medium.com/@franleplant/react-higher-order-components-in-depth-cf9032ee6c3e) instead, which means whenever you need access to the router information you will have to wrap your component with `withRouter`.
 
 ## Environment variables
+
 These are some of the environment variables that we need:
 CW_API: Base Climate Watch API
 ESP_API: Emission Pathways API
