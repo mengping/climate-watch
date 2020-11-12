@@ -1,0 +1,58 @@
+module.exports = {
+  env: {
+    production: {
+      plugins: [
+        [
+          'transform-react-remove-prop-types',
+          {
+            mode: 'remove',
+            removeImport: true,
+            ignoreFilenames: ['node_modules']
+          }
+        ]
+      ]
+    }
+  },
+  presets: [
+    [
+      '@babel/preset-env',
+      {
+        modules: false,
+        targets: {
+          browsers: [
+            '> 1%',
+            'last 2 versions',
+            'Firefox ESR',
+            'Safari >= 8',
+            'IE >= 11'
+          ],
+          node: 'current'
+        },
+        useBuiltIns: 'entry',
+        corejs: '^3'
+      }
+    ],
+    '@babel/preset-react'
+  ],
+  plugins: [
+    '@babel/plugin-syntax-dynamic-import',
+    [
+      '@babel/plugin-proposal-class-properties',
+      {
+        spec: true
+      }
+    ],
+    '@babel/plugin-syntax-import-meta',
+    '@babel/plugin-proposal-json-strings',
+    [
+      '@babel/plugin-proposal-decorators',
+      {
+        legacy: true
+      }
+    ],
+    '@babel/plugin-proposal-function-sent',
+    '@babel/plugin-proposal-export-namespace-from',
+    '@babel/plugin-proposal-numeric-separator',
+    '@babel/plugin-proposal-throw-expressions'
+  ]
+};
