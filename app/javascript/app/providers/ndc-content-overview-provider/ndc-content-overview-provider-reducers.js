@@ -14,6 +14,7 @@ const setError = (error, state) => ({ ...state, error });
 export default {
   getNdcContentOverviewInit: state => setLoading(true, state),
   getNdcContentOverviewReady: (state, { payload }) => {
+    if (!payload) return undefined;
     const locationCodes = payload.locations;
     const locations = locationCodes.reduce(
       (accum, l) => ({ ...accum, [l]: payload.data[l] }),
