@@ -10,7 +10,7 @@ import Component from './download-menu-component';
 const { S3_BUCKET_NAME } = process.env;
 const { CW_FILES_PREFIX } = process.env;
 
-const server = `http://${S3_BUCKET_NAME}.s3.amazonaws.com`;
+const server = `https://${S3_BUCKET_NAME}.s3.amazonaws.com`;
 const folder = `/${CW_FILES_PREFIX}climate-watch-download-zip`;
 const url = `${server}${folder}`;
 
@@ -63,6 +63,14 @@ class DownloadMenuContainer extends PureComponent {
     {
       label: 'GHG emissions (9 MB)',
       action: this.handleOnClick.bind(this, `${url}/ghg-emissions.zip`, '9 MB')
+    },
+    {
+      label: 'Agriculture Profile (4.4 MB)',
+      action: this.handleOnClick.bind(
+        this,
+        `${url}/CW_Agriculture_Profile.zip`,
+        '4.4 MB'
+      )
     },
     {
       label: 'Adaptation (357 kB)',

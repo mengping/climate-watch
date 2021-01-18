@@ -32,7 +32,6 @@ class ImportIndc
       import_sources
       import_category_types
       import_categories
-      import_category_relations
       import_indicators
       import_indicators_categories
       import_labels
@@ -48,11 +47,13 @@ class ImportIndc
       import_values_pledges
 
       reject_map_indicators_without_values_or_labels
+
       import_submissions
       import_comparison_slugs
-      Indc::SearchableValue.refresh
     end
+
     generate_subsectors_map_data
+    Indc::SearchableValue.refresh
   end
 
   def generate_subsectors_map_data
@@ -71,52 +72,58 @@ class ImportIndc
 
       order = sectoral_cat.indicators.maximum(:order) || 0
       Indc::Sector.where.not(parent_id: nil).joins(values: :indicator).
-        where("indc_indicators.slug ilike ?", "#{prefix.upcase}_%").distinct.each do |sector|
+        where('indc_indicators.slug ilike ?', "#{prefix.upcase}_%").distinct.each do |sector|
         sector_name = sector.name == sector.parent.name ? "#{sector.name} Subsector" : sector.name
         ind_slug = [prefix, sector_name.parameterize.gsub('-', '_'), 'auto'].join('_')
         next if Indc::Indicator.find_by(slug: ind_slug, source_id: source)
 
-        indicator = Indc::Indicator.find_or_create_by!(source_id: source,
-                                                      slug: ind_slug,
-                                                      name: sector_name,
-                                                      description: "Created automatically",
-                                                      multiple_versions: true)
+        indicator = Indc::Indicator.create!(source_id: source,
+                                            slug: ind_slug,
+                                            name: sector_name,
+                                            description: "Created automatically",
+                                            multiple_versions: true)
         indicator.categories << sectoral_cat
         if indicator.order.nil?
           order += 1
           indicator.order = order
           indicator.save
         end
-        label_yes = Indc::Label.find_or_create_by!(indicator_id: indicator.id,
-                                                  index: 1,
-                                                  value: 'Sectoral Measure Specified')
-        label_no = Indc::Label.find_or_create_by!(indicator_id: indicator.id,
-                                                 index: 2,
-                                                 value: 'No Sectoral Measure Specified')
-        label_no_doc = Indc::Label.find_or_create_by!(indicator_id: indicator.id,
-                                                     index: -2,
-                                                     value: 'No Document Submitted')
+        label_yes = Indc::Label.create!(indicator_id: indicator.id,
+                                        index: 1,
+                                        value: 'Sectoral Measure Specified')
+        label_no = Indc::Label.create!(indicator_id: indicator.id,
+                                       index: 2,
+                                       value: 'No Sectoral Measure Specified')
+        # not sure if this label should be created or not
+        label_no_doc = Indc::Label.create!(indicator_id: indicator.id,
+                                           index: -2,
+                                           value: 'No Document Submitted')
+
+        values = []
+
         locations.each do |loc|
           Indc::Document.where(slug: 'first_ndc', is_ndc: true).each do |doc|
             if sector.values.where(location_id: loc.id, document_id: doc.id).
-                where.not("value ilike 'Not Available'").
-                joins(:indicator).where("indc_indicators.slug ilike ?", "#{prefix.upcase}_%").any?
-              Indc::Value.find_or_create_by!(location_id: loc.id,
-                                             label_id: label_yes.id,
-                                             value: 'Sectoral Measure Specified',
-                                             document_id: doc.id,
-                                             indicator_id: indicator.id,
-                                             sector_id: sector.id)
+                 where.not("value ilike 'Not Available'").
+                 joins(:indicator).where("indc_indicators.slug ilike ?", "#{prefix.upcase}_%").any?
+              values << Indc::Value.new(location_id: loc.id,
+                                        label_id: label_yes.id,
+                                        value: 'Sectoral Measure Specified',
+                                        document_id: doc.id,
+                                        indicator_id: indicator.id,
+                                        sector_id: sector.id)
             else
-              Indc::Value.find_or_create_by!(location_id: loc.id,
-                                            label_id: label_no.id,
-                                            value: 'No Sectoral Measure Specified',
-                                            document_id: doc.id,
-                                            indicator_id: indicator.id,
-                                            sector_id: sector.id)
+              values << Indc::Value.new(location_id: loc.id,
+                                        label_id: label_no.id,
+                                        value: 'No Sectoral Measure Specified',
+                                        document_id: doc.id,
+                                        indicator_id: indicator.id,
+                                        sector_id: sector.id)
             end
           end
         end
+
+        Indc::Value.import!(values)
       end
     end
     puts "We added #{Indc::Value.count - count} new values for subsector indicators"
@@ -195,23 +202,25 @@ class ImportIndc
     {
       location: location,
       indicator: indicator,
-      label: Indc::Label.find_by(
-        value: row[:"#{indicator.slug}_label"],
+      label_id: Indc::Label.where(
+        value: row[:"#{indicator.slug.downcase}_label"],
         indicator: indicator
-      ),
-      value: row[:"#{indicator.slug}"],
-      document: Indc::Document.find_by(slug: doc_slug)
+      ).pluck(:id).first,
+      value: row[:"#{indicator.slug.downcase}"],
+      document_id: Indc::Document.where(slug: doc_slug).pluck(:id).first
     }
   end
 
-  def value_wb_attributes(row, location, indicator)
-    doc_slug = row[:document]&.parameterize&.gsub('-', '_')
+  # for datasets that don't have multiple files we can pass the doc_slug
+  # as a param, for example for LTS
+  def value_wb_attributes(row, location, indicator, doc_slug = nil)
+    doc_slug ||= row[:document]&.parameterize&.gsub('-', '_')
     {
       location: location,
       indicator: indicator,
       sector: @sectors_index[row[:subsector]],
       value: row[:responsetext],
-      document: Indc::Document.find_by(slug: doc_slug)
+      document_id: Indc::Document.where(slug: doc_slug).pluck(:id).first
     }
   end
 
@@ -234,18 +243,8 @@ class ImportIndc
       language: submission[:language],
       submission_date: submission[:date_of_submission],
       url: submission[:url],
-      document_id: ::Indc::Document.find_by(slug: doc_slug)&.id
+      document_id: Indc::Document.where(slug: doc_slug).pluck(:id).first
     }
-  end
-
-  def import_categories_of(category_type)
-    @metadata.
-      map { |m| m[:"#{category_type.name}_category"] }.
-      select(&:itself).
-      uniq.
-      each_with_index do |name, index|
-        Indc::Category.create!(category_attributes(name, category_type, index))
-      end
   end
 
   def import_sources
@@ -267,48 +266,64 @@ class ImportIndc
   end
 
   def import_categories
-    Indc::CategoryType.all.
-      each do |category_type|
-        import_categories_of(category_type)
-      end
-  end
+    @global_categories_index = {}
 
-  # rubocop:disable MethodLength
-  def import_category_relations
-    @metadata.each do |r|
-      next unless r[:global_category]
+    category_indexes = {
+      map: 0,
+      overview: 0
+    }
 
-      global_category = Indc::Category.
-        includes(:category_type).
-        find_by(
-          slug: Slug.create(r[:global_category]),
-          indc_category_types: {name: 'global'}
-        ) or next
+    global_category_type = Indc::CategoryType.find_by(name: ::Indc::CategoryType::GLOBAL)
+    overview_category_type = Indc::CategoryType.find_by(name: ::Indc::CategoryType::OVERVIEW)
+    map_category_type = Indc::CategoryType.find_by(name: ::Indc::CategoryType::MAP)
 
-      if r[:overview_category]
-        overview_category = Indc::Category.
-          includes(:category_type).
-          find_by(
-            slug: Slug.create(r[:overview_category]),
-            indc_category_types: {name: 'overview'}
+    @metadata.each do |m|
+      global_category_name = m[:global_category]
+      overview_category_name = m[:overview_category]
+      map_category_name = m[:map_category]
+
+      global_category = @global_categories_index[global_category_name] ||= Indc::Category.create(
+        category_attributes(
+          global_category_name,
+          global_category_type,
+          @global_categories_index.keys.size
+        )
+      )
+
+      if overview_category_name &&
+          !Indc::Category.find_by(
+            name: overview_category_name,
+            parent_id: global_category.id,
+            category_type: overview_category_type
           )
-      end
-
-      if r[:map_category]
-        map_category = Indc::Category.
-          includes(:category_type).
-          find_by(
-            slug: Slug.create(r[:map_category]),
-            indc_category_types: {name: 'map'}
+        Indc::Category.create!(
+          category_attributes(
+            overview_category_name,
+            overview_category_type,
+            category_indexes[:overview]
+          ).merge(
+            parent_id: global_category.id
           )
+        )
+        category_indexes[:overview] += 1
       end
 
-      global_category.children << [
-        overview_category, map_category
-      ].select(&:itself)
+      if map_category_name &&
+          !Indc::Category.find_by(
+            name: map_category_name,
+            category_type: map_category_type
+          )
+        Indc::Category.create!(
+          category_attributes(
+            map_category_name,
+            map_category_type,
+            category_indexes[:map]
+          )
+        )
+        category_indexes[:map] += 1
+      end
     end
   end
-  # rubocop:enable MethodLength
 
   def import_indicators
     @metadata.
@@ -335,9 +350,12 @@ class ImportIndc
         map do |category_type|
           next if r[:"#{category_type}_category"].nil?
 
+          parent = @global_categories_index[r[:global_category]] if category_type == 'overview'
+
           Indc::Category.find_by!(
             name: r[:"#{category_type}_category"],
-            category_type: @category_types_index[category_type]
+            category_type: @category_types_index[category_type],
+            parent_id: parent&.id
           )
         end
 
@@ -385,7 +403,9 @@ class ImportIndc
 
   def import_values_ndc
     valid_sources = [@sources_index['CAIT'], @sources_index['NDC Explorer'],
-                     @sources_index['WB'], @sources_index['Net Zero Tracker']]
+                     @sources_index['WB'], @sources_index['ECIU']]
+    values = []
+
     Indc::Indicator.
       where(source: valid_sources).
       each do |indicator|
@@ -396,16 +416,19 @@ class ImportIndc
           next
         end
 
-        next unless r[:"#{indicator.slug}"].present?
+        next unless r[:"#{indicator.slug.downcase}"].present?
 
-        Indc::Value.create!(
+        values << Indc::Value.new(
           value_ndc_attributes(r, location, indicator)
         )
       end
     end
+
+    Indc::Value.import!(values)
   end
 
   def import_values_lts
+    values = []
     Indc::Indicator.
       where(source: @sources_index['LTS']).each do |indicator|
       @lts_data.each do |r|
@@ -415,16 +438,18 @@ class ImportIndc
           next
         end
 
-        next unless r[:"#{indicator.slug}"].present?
+        next unless r[:"#{indicator.slug.downcase}"].present?
 
-        Indc::Value.create!(
+        values << Indc::Value.new(
           value_ndc_attributes(r, location, indicator, 'lts')
         )
       end
     end
+    Indc::Value.import!(values)
   end
 
   def import_values_pledges
+    values = []
     Indc::Indicator.
       where(source: @sources_index['Pledges']).each do |indicator|
       @pledges_data.each do |r|
@@ -434,13 +459,14 @@ class ImportIndc
           next
         end
 
-        next unless r[:"#{indicator.slug}"].present?
+        next unless r[:"#{indicator.slug.downcase}"].present?
 
-        Indc::Value.create!(
+        values << Indc::Value.new(
           value_ndc_attributes(r, location, indicator, 'pledges')
         )
       end
     end
+    Indc::Value.import!(values)
   end
 
   def import_sectors_lts
@@ -485,7 +511,7 @@ class ImportIndc
       next unless r[:responsetext]
 
       Indc::Value.create!(
-        value_wb_attributes(r, location, indicator)
+        value_wb_attributes(r, location, indicator, 'lts')
       )
     end
   end
@@ -516,6 +542,7 @@ class ImportIndc
       map { |k, v| [k, v.first] }.
       to_h
 
+    values = []
     @wb_sectoral_data.each do |r|
       location = @locations_by_iso2[r[:country]]
       unless location
@@ -531,10 +558,11 @@ class ImportIndc
 
       next unless r[:responsetext]
 
-      Indc::Value.create!(
+      values << Indc::Value.new(
         value_wb_attributes(r, location, indicator)
       )
     end
+    Indc::Value.import!(values)
   end
 
   def import_documents
@@ -559,7 +587,7 @@ class ImportIndc
   # to be able to compare values for different indicators
   def import_comparison_slugs
     @comparison_indicators.each do |ind|
-      slugs = [ind[:pledges_slug], ind[:ndc_slug], ind[:lts_slug]]
+      slugs = [ind[:pledges_slug], ind[:ndc_slug], ind[:lts_slug], ind[:lse_slug]]
       Indc::Indicator.where(slug: slugs).update_all(normalized_label: ind[:normalized_label],
                                                     normalized_slug: ind[:normalized_slug])
     end

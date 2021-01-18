@@ -67,6 +67,8 @@ Rails.application.routes.draw do
       resources :lse_laws_and_policies, only: [:show]
       resources :updates, only: [:index]
 
+      resources :key_visualizations, only: [:index]
+
       namespace :data do
         resources :historical_emissions, only: [:index] do
           get :download, on: :collection, defaults: { format: 'zip' }
@@ -108,6 +110,15 @@ Rails.application.routes.draw do
           resources :categories, only: [:index]
           resources :labels, only: [:index]
           resources :sectors, only: [:index]
+        end
+        resources :net_zero_content, only: [:index] do
+          get :download, on: :collection, defaults: { format: 'zip' }
+          get :meta, on: :collection
+        end
+        namespace :net_zero_content do
+          resources :indicators, only: [:index]
+          resources :data_sources, only: [:index]
+          resources :categories, only: [:index]
         end
         namespace :agriculture_profile, only: [:index] do
           resources :emissions, only: [:index]

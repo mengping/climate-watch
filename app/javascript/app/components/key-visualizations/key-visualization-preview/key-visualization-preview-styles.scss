@@ -1,0 +1,60 @@
+@import '~styles/layout.scss';
+@import '~styles/ui-extends.scss';
+
+.previewContainer {
+  margin: 20px 15px;
+  padding-top: 30px;
+  border-top: solid 1px $gray2;
+
+  @media #{$mobile-only} {
+    grid-column: 1;
+  }
+
+  @media #{$tablet-portrait} {
+    grid-column: 1 / span 2;
+  }
+
+  @media #{$tablet-landscape} {
+    grid-column: 1 / 4;
+  }
+}
+
+.previewHeader {
+  display: flex;
+
+  @media #{$mobile-only} {
+    flex-direction: column;
+  }
+
+  h1 {
+    font-weight: 400;
+    margin-right: 30px;
+    width: calc(100% - 300px);
+
+    @media #{$mobile-only} {
+      width: 100%;
+    }
+  }
+}
+
+.buttonGroup {
+  width: 140px;
+
+  @media #{$mobile-only} {
+    margin-top: 15px;
+  }
+}
+
+.previewContent {
+  display: flex;
+  margin: 30px 0;
+  justify-content: center;
+}
+
+.previewLink {
+  margin: 5px 0 15px;
+}
+
+.previewDescription {
+  line-height: 22px;
+}

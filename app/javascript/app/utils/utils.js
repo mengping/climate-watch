@@ -1,4 +1,5 @@
 /* eslint-disable no-useless-escape */
+import { useRef, useEffect } from 'react';
 import deburr from 'lodash/deburr';
 import toUpper from 'lodash/toUpper';
 import upperFirst from 'lodash/upperFirst';
@@ -208,9 +209,11 @@ export function noEmptyValues(object) {
   return noEmptyResult;
 }
 
-export const arrayToSentence = arr => {
+export const arrayToSentence = (arr, conjunction = 'and') => {
   const sentence =
-    arr.length > 1 ? `${arr.slice(0, arr.length - 1).join(', ')}, and ` : '';
+    arr.length > 1
+      ? `${arr.slice(0, arr.length - 1).join(', ')}, ${conjunction} `
+      : '';
   return `${sentence}${arr.slice(-1)}`;
 };
 
@@ -273,6 +276,35 @@ export const useSlug = string => {
 export const isIE = () =>
   !!window.MSInputMethodContext && !!document.documentMode;
 
+export const usePrevious = value => {
+  const ref = useRef();
+  useEffect(() => {
+    ref.current = value;
+  });
+  return ref.current;
+};
+
+export const getGridElementPosition = (gridEl, elIndex) => {
+  if (!gridEl || gridEl.children.length === 0) {
+    return null;
+  }
+
+  // Our indexes are zero-based but gridColumns are 1-based, so subtract 1
+  let offset = Number(getComputedStyle(gridEl.children[0]).gridColumnStart) - 1;
+
+  // if we haven't specified the first child's grid column, then there is no offset
+  if (isNaN(offset)) {
+    offset = 0;
+  }
+  const colCount = getComputedStyle(gridEl).gridTemplateColumns.split(' ')
+    .length;
+  const rowPosition = Math.floor((elIndex + offset) / colCount);
+  const colPosition = (elIndex + offset) % colCount;
+
+  // Return an object with properties row and column
+  return { row: rowPosition, column: colPosition };
+};
+
 export default {
   arrayToSentence,
   compareIndexByKey,
@@ -290,5 +322,6 @@ export default {
   stripHTML,
   toStartCase,
   truncateDecimals,
-  wordWrap
+  wordWrap,
+  getGridElementPosition
 };

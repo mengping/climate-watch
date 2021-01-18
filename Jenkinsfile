@@ -4,17 +4,6 @@ node {
 
   // Actions
   def forceCompleteDeploy = false
-  try {
-    timeout(time: 60, unit: 'SECONDS') {
-      forceCompleteDeploy = input(
-        id: 'Proceed0', message: 'Force COMPLETE Deployment', parameters: [
-        [$class: 'BooleanParameterDefinition', defaultValue: true, description: '', name: 'Please confirm you want to recreate services and deployments']
-      ])
-    }
-  }
-  catch(err) { // timeout reached or input false
-      // nothing
-  }
 
   // Variables
   def tokens = "${env.JOB_NAME}".tokenize('/')
@@ -33,13 +22,13 @@ node {
   def user_report_key = 'cf0fa021-d239-457b-bb99-e9ab0205134c'
   def user_survey_spreadsheet = 'https://script.google.com/macros/s/AKfycbzgN1G9IdLYO3KqlTC4gzBxR1UTX5bYXu1qRaiRn1oD9qoaq6s/exec'
 
-  def feature_flags_env = '--build-arg FEATURE_AGRICULTURE=true'
+  def feature_flags_env = ' --build-arg FEATURE_KEY_VISUALIZATIONS=false'
 
   if (env.BRANCH_NAME == 'master') {
     cw_files_prefix = 'climatewatch.org/www.climatewatch.org/climate-watch/'
     user_report_key = '81f6ea43-5c9f-48e0-bdb2-56fc59aafbb4'
   } else {
-    feature_flags_env = feature_flags_env + ' --build-arg FEATURE_NDC_EXPLORE=true --build-arg FEATURE_COMMITMENTS_OVERVIEW=true --build-arg FEATURE_NEW_GHG=true --build-arg FEATURE_ALL_COMMITMENTS_MENU_ITEMS=true  --build-arg FEATURE_NDC_FILTERING=true'
+    feature_flags_env = feature_flags_env + ' --build-arg FEATURE_POP_UP=false'
   }
 
   // env vars with build-arg
@@ -53,19 +42,8 @@ node {
   try {
 
     stage ('Build docker') {
-      switch ("${env.BRANCH_NAME}") {
-        case "master":
-          sh("docker -H :2375 build ${base_envs} ${feature_flags_env} ${cw_files_env} ${app_signal_env} ${user_report_env} ${user_survey_env} -t ${imageTag} ." )
-          sh("docker -H :2375 build ${base_envs} ${feature_flags_env} ${cw_files_env} ${app_signal_env} ${user_report_env} ${user_survey_env} -t ${dockerUsername}/${appName}:latest ." )
-          break
-        case "sandbox":
-          sh("docker -H :2375 build ${base_envs} ${feature_flags_env} ${cw_files_env} ${app_signal_env} ${user_report_env} ${user_survey_env} -t ${imageTag} ." )
-          sh("docker -H :2375 build ${base_envs} ${feature_flags_env} ${cw_files_env} ${app_signal_env} ${user_report_env} ${user_survey_env} -t ${dockerUsername}/${appName}:latest ." )
-          break
-        default:
-          sh("docker -H :2375 build ${base_envs} ${feature_flags_env} ${cw_files_env} ${app_signal_env} ${user_report_env} ${user_survey_env} -t ${imageTag} ." )
-          sh("docker -H :2375 build ${base_envs} ${feature_flags_env} ${cw_files_env} ${app_signal_env} ${user_report_env} ${user_survey_env} -t ${dockerUsername}/${appName}:latest ." )
-      }
+      sh("docker -H :2375 build ${base_envs} ${feature_flags_env} ${cw_files_env} ${app_signal_env} ${user_report_env} ${user_survey_env} -t ${imageTag} ." )
+      sh("docker -H :2375 build ${base_envs} ${feature_flags_env} ${cw_files_env} ${app_signal_env} ${user_report_env} ${user_survey_env} -t ${dockerUsername}/${appName}:latest ." )
     }
 
     stage ('Run Tests') {
@@ -91,11 +69,8 @@ node {
         // Roll out to sandbox
         case "sandbox":
           sh("echo Deploying to STAGING app")
-          def service = sh([returnStdout: true, script: "kubectl get deploy ${appName}-staging --namespace=climate-watch || echo NotFound"]).trim()
-          if ((service && service.indexOf("NotFound") > -1) || (forceCompleteDeploy)){
-            sh("sed -i -e 's/{name}/${appName}/g' k8s/staging/*.yaml")
-            sh("kubectl apply -f k8s/staging/")
-          }
+          sh("sed -i -e 's/{name}/${appName}/g' k8s/staging/*.yaml")
+          sh("kubectl apply -f k8s/staging/")
           sh("kubectl set image deployment ${appName}-staging ${appName}-staging=${imageTag} --record --namespace=climate-watch")
           break
 
@@ -121,11 +96,7 @@ node {
           }
           if (userInput == true && !didTimeout){
             sh("echo Deploying to PROD app")
-            def service = sh([returnStdout: true, script: "kubectl get deploy ${appName} --namespace=climate-watch || echo NotFound"]).trim()
-            if ((service && service.indexOf("NotFound") > -1) || (forceCompleteDeploy)){
-              sh("sed -i -e 's/{name}/${appName}/g' k8s/production/*.yaml")
-              sh("kubectl apply -f k8s/production/")
-            }
+            sh("kubectl apply -f k8s/production/")
             sh("kubectl set image deployment ${appName} ${appName}=${imageTag} --record --namespace=climate-watch")
           } else {
             sh("echo NOT DEPLOYED")

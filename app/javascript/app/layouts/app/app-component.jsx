@@ -1,8 +1,9 @@
 import React, { PureComponent } from 'react';
 import Proptypes from 'prop-types';
+import { isPageContained, isEmbededComponent } from 'utils/navigation';
 import { renderRoutes } from 'react-router-config';
 import cx from 'classnames';
-
+import PopUp from 'components/pop-up';
 import CountriesProvider from 'providers/countries-provider';
 import UserReport from 'components/user-report';
 import { Desktop } from 'components/responsive';
@@ -10,10 +11,9 @@ import NavBarMobile from 'components/navbar-mobile';
 import NavBar from 'components/navbar';
 import Footer from 'components/footer';
 import CookieConsent from 'components/cookie-consent';
-import { HOME_PAGE } from 'data/SEO';
-import { MetaDescription, SocialMetadata } from 'components/seo';
+import styles from './app-styles.scss';
 
-import styles from './app-styles.scss'; // eslint-disable-line
+const FEATURE_POP_UP = process.env.FEATURE_POP_UP === 'true';
 
 class App extends PureComponent {
   render() {
@@ -26,8 +26,6 @@ class App extends PureComponent {
           navbarMobileIsOpen ? styles.mobileMenuOpen : ''
         )}
       >
-        <MetaDescription descriptionContext={HOME_PAGE} />
-        <SocialMetadata descriptionContext={HOME_PAGE} href={location.href} />
         <CountriesProvider />
         <Desktop>
           {isDesktop =>
@@ -44,6 +42,9 @@ class App extends PureComponent {
         <Footer />
         <UserReport />
         <CookieConsent />
+        {FEATURE_POP_UP &&
+          !isPageContained &&
+          !isEmbededComponent(location) && <PopUp />}
       </div>
     );
   }

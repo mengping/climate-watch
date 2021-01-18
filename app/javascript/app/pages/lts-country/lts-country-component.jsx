@@ -11,16 +11,14 @@ import cx from 'classnames';
 import Sticky from 'react-stickynode';
 import AnchorNav from 'components/anchor-nav';
 import { Dropdown as CWDropdown } from 'cw-components';
-import { LTS_COUNTRY } from 'data/SEO';
-import { MetaDescription, SocialMetadata } from 'components/seo';
+import { SEO_PAGES } from 'data/seo';
+import SEOTags from 'components/seo-tags';
 import { TabletPortrait, MobileOnly } from 'components/responsive';
 import externalLinkIcon from 'assets/icons/external-link.svg';
 
 import anchorNavRegularTheme from 'styles/themes/anchor-nav/anchor-nav-regular.scss';
 import countryDropdownTheme from 'styles/themes/dropdown/dropdown-country.scss';
 import styles from './lts-country-styles.scss';
-
-const FEATURE_NDC_EXPLORE = process.env.FEATURE_NDC_EXPLORE === 'true';
 
 class LTSCountry extends PureComponent {
   renderFullTextDropdown() {
@@ -47,7 +45,6 @@ class LTSCountry extends PureComponent {
           variant="primary"
           link={`/custom-compare/overview?targets=${match.params.iso}-lts`}
           className={styles.compareButton}
-          disabled={!FEATURE_NDC_EXPLORE}
         >
           Compare Countries and Submissions
         </Button>
@@ -99,13 +96,12 @@ class LTSCountry extends PureComponent {
 
     return (
       <div>
-        <MetaDescription
-          descriptionContext={LTS_COUNTRY({ countryName })}
-          subtitle={countryName}
-        />
-        <SocialMetadata
-          descriptionContext={LTS_COUNTRY({ countryName })}
+        <SEOTags
+          page={SEO_PAGES.ltsCountry}
+          dynamicTitlePart={countryName}
+          countryName={countryName}
           href={location.href}
+          canonicalAttribute={country && country.iso_code3}
         />
         {country && (
           <Header route={route}>

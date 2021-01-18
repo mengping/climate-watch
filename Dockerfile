@@ -1,5 +1,5 @@
 FROM ruby:2.5.1
-MAINTAINER Jose Angel Parreño <joseangel.parreno@vizzuality.com>
+MAINTAINER info@vizzuality.com
 
 ENV NAME climate-watch
 
@@ -22,47 +22,30 @@ ENV S3_BUCKET_NAME wri-sites
 
 ENV GOOGLE_ANALYTICS_ID UA-1981881-51
 
-ARG FEATURE_AGRICULTURE
-ENV FEATURE_AGRICULTURE $FEATURE_AGRICULTURE
+ARG FEATURE_POP_UP
+ENV FEATURE_POP_UP $FEATURE_POP_UP
 
-ARG FEATURE_NDC_EXPLORE
-ENV FEATURE_NDC_EXPLORE $FEATURE_NDC_EXPLORE
+ARG POP_UP
+ENV POP_UP $POP_UP
 
-ARG FEATURE_NEW_GHG
-ENV FEATURE_NEW_GHG $FEATURE_NEW_GHG
-
-ARG FEATURE_NDC_FILTERING
-ENV FEATURE_NDC_FILTERING $FEATURE_NDC_FILTERING
-
-ARG FEATURE_COMMITMENTS_OVERVIEW
-ENV FEATURE_COMMITMENTS_OVERVIEW $FEATURE_COMMITMENTS_OVERVIEW
-
-ARG FEATURE_ALL_COMMITMENTS_MENU_ITEMS
-ENV FEATURE_ALL_COMMITMENTS_MENU_ITEMS $FEATURE_ALL_COMMITMENTS_MENU_ITEMS
+ARG FEATURE_KEY_VISUALIZATIONS
+ENV FEATURE_KEY_VISUALIZATIONS $FEATURE_KEY_VISUALIZATIONS
 
 ARG USER_REPORT_KEY
 ENV USER_REPORT_KEY $USER_REPORT_KEY
 
 # Install dependencies
+RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        postgresql-client \
-    && rm -rf /var/lib/apt/lists/* \
-    && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
-    && apt-get install -y nodejs build-essential patch zlib1g-dev liblzma-dev libicu-dev \
-    && npm install -g yarn
+        postgresql-client nodejs build-essential patch zlib1g-dev liblzma-dev libicu-dev
+RUN npm install -g yarn
 
 RUN gem install bundler --no-ri --no-rdoc
 
 # Create app directory
 RUN mkdir -p /usr/src/$NAME
 WORKDIR /usr/src/$NAME
-# VOLUME /usr/src/$NAME
-
-# Install and run scheduling
-#RUN gem install whenever
-#RUN whenever --load-file config/schedule.rb
-#RUN whenever --update-crontab
 
 # Install app dependencies
 COPY Gemfile Gemfile.lock ./

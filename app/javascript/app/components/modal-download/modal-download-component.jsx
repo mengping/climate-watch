@@ -21,6 +21,7 @@ class ModalDownload extends PureComponent {
       sector: {},
       country: {},
       explanation: '',
+      training: false,
       subscription: false,
       testUser: false
     };
@@ -138,9 +139,8 @@ class ModalDownload extends PureComponent {
             label="How do you intend to use the data?"
             value={this.state.explanation}
             onChange={e => this.handleChange(e, 'explanation')}
-            optional
+            required={requiredError}
           />
-
           <CheckInput
             checked={this.state.testUser}
             label="Do you want to test new developments of Climate Watch platform?"
@@ -148,7 +148,14 @@ class ModalDownload extends PureComponent {
             toggleFirst
             disabled={!this.state.email && true}
             id="testUser"
-            errorText="Please enter a valid email to optin"
+            errorText="Please enter a valid email to option"
+          />
+          <CheckInput
+            checked={this.state.training}
+            label="We are offering trainings for our users. Would your organization benefit from a Climate Watch training?"
+            onChange={e => this.updateCheckValue(e, 'training')}
+            toggleFirst
+            id="training"
           />
         </form>
         <Button

@@ -167,7 +167,13 @@ export const getPathsWithStyles = createSelector(
 
 export const getLinkToDataExplorer = createSelector([getSearch], search => {
   const section = 'ndc-content';
-  return generateLinkToDataExplorer(search, section);
+  return generateLinkToDataExplorer(
+    {
+      category: 'ndc_enhancement',
+      ...search
+    },
+    section
+  );
 });
 
 // Chart data methods
@@ -214,7 +220,7 @@ export const summarizeIndicators = createSelector(
             ),
             suffix: '%',
             label:
-              'of global emissions are represented by these countries (2014 emissions data)'
+              'of global emissions are represented by these countries (2016 emissions data)'
           }
         }
       };
@@ -223,17 +229,29 @@ export const summarizeIndicators = createSelector(
     locations.forEach(l => {
       const location = indicator.locations[l];
       const type = location.label_slug;
+      const emissionPercentages = emissionsIndicator.locations;
       if (type) {
-        if (l === 'EUU') {
+        if (l === europeSlug) {
+          const EUTotal = parseFloat(emissionPercentages[europeSlug].value);
+          const europeanLocationIsos = locations.filter(iso =>
+            europeanCountries.includes(iso)
+          );
+          const europeanLocationsValue = europeanLocationIsos.reduce(
+            (acc, iso) => acc + parseFloat(emissionPercentages[iso].value),
+            0
+          );
+          summaryData[type].emissions.value += EUTotal - europeanLocationsValue; // To avoid double counting
+          summaryData[type].countries.value +=
+            europeanCountries.length - europeanLocationIsos.length; // To avoid double counting
           summaryData[type].includesEU = true;
-          summaryData[type].countries.value += 27;
         } else {
           summaryData[type].countries.value += 1;
-        }
-        if (emissionsIndicator.locations[l]) {
-          summaryData[type].emissions.value += parseFloat(
-            emissionsIndicator.locations[l].value
-          );
+
+          if (emissionsIndicator.locations[l]) {
+            summaryData[type].emissions.value += parseFloat(
+              emissionsIndicator.locations[l].value
+            );
+          }
         }
       }
     });
@@ -241,32 +259,12 @@ export const summarizeIndicators = createSelector(
       summaryData[type].emissions.value = parseFloat(
         summaryData[type].emissions.value.toFixed(1)
       );
-      const count = summaryData[type].countries.value;
-      summaryData[type].countries.opts.label = (() => {
-        switch (type) {
-          case 'enhance_2020':
-            return `<strong>countr${
-              count === 1 ? 'y has' : 'ies have'
-            } stated their intention to <span title="Definition: Strengthening mitigation ambition and/or increasing adaptation action in the 2020 NDC.">enhance ambition or action</span> in an NDC by 2020`;
-          case 'intend_2020':
-            return `<strong>countr${
-              count === 1 ? 'y has' : 'ies have'
-            } stated their intention to <span title="Definition: Includes providing information to improve the clarity of the NDC or on measures to implement the current NDC.">update</span> an NDC by 2020`;
-          case 'submitted_2020':
-            return `<strong>countr${
-              count === 1 ? 'y has' : 'ies have'
-            } submitted a 2020 NDC`;
-          default:
-            return `<strong>countr${count === 1 ? 'y' : 'ies'}`;
-        }
-      })();
-      if (summaryData[type].includesEU) {
-        summaryData[type].countries.opts.label +=
-          ' (including the European Union)';
-      }
-      summaryData[
-        type
-      ].countries.opts.label += `</strong>, representing <span title="2014 emissions data">${summaryData[type].emissions.value}% of global emissions</span>`;
+      const emissionsString = `, representing <span title="2016 emissions data">${summaryData[type].emissions.value}% of global emissions</span>`;
+      summaryData[type].countries.opts.label =
+        {
+          enhance_2020: `<strong>countries</strong>${emissionsString}, <strong>have stated their intention to <span title="Definition: Strengthening mitigation ambition and/or increasing adaptation action in a new or updated NDC.">enhance ambition or action</span> in new or updated NDCs</strong>`,
+          submitted_2020: `<strong>countries (including the 27 EU countries)</strong>${emissionsString}, <strong>have submitted a new or updated NDC</strong>`
+        }[type] || '';
     });
     return summaryData;
   }

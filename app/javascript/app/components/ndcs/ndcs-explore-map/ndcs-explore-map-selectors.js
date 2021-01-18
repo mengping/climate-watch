@@ -7,6 +7,7 @@ import intersection from 'lodash/intersection';
 import { generateLinkToDataExplorer } from 'utils/data-explorer';
 import worldPaths from 'app/data/world-50m-paths';
 import { COUNTRY_STYLES } from 'components/ndcs/shared/constants';
+import { getIsShowEUCountriesChecked } from 'components/ndcs/shared/explore-map/explore-map-selectors';
 import {
   sortByIndexAndNotInfo,
   getIndicatorEmissionsData,
@@ -44,8 +45,6 @@ const getCategoriesData = createSelector(
 );
 
 const getIndicatorsData = state => state.indicators || null;
-const getCountriesDocumentsData = state =>
-  state.countriesDocuments.data || null;
 const getZoom = state => state.map.zoom || null;
 
 export const getDonutActiveIndex = state =>
@@ -169,11 +168,14 @@ export const getMapIndicator = createSelector(
 );
 
 export const getPathsWithStyles = createSelector(
-  [getMapIndicator, getZoom],
-  (indicator, zoom) => {
+  [getMapIndicator, getZoom, getIsShowEUCountriesChecked],
+  (indicator, zoom, showEUCountriesChecked) => {
     if (!indicator) return [];
     const paths = [];
-    worldPaths.forEach(path => {
+    const selectedWorldPaths = showEUCountriesChecked
+      ? worldPaths
+      : worldPaths.filter(p => !europeanCountries.includes(p.properties.id));
+    selectedWorldPaths.forEach(path => {
       if (shouldShowPath(path, zoom)) {
         const { locations, legendBuckets } = indicator;
         if (!locations) {
@@ -339,39 +341,23 @@ const getCountriesAndParties = submissions => {
 };
 
 export const getSummaryCardData = createSelector(
-  [getIndicatorsData, getCountriesDocumentsData],
-  (indicators, countriesDocuments) => {
-    if (!indicators || !countriesDocuments) return null;
-
-    const firstNDCIsos = Object.keys(countriesDocuments).filter(iso =>
-      countriesDocuments[iso].some(
-        doc => doc.slug === 'first_ndc' && doc.submission_date
-      )
+  [getIndicatorsData],
+  indicators => {
+    if (!indicators) return null;
+    const submittedIndicator = indicators.find(
+      ind => ind.slug === 'ndce_status_2020'
     );
-
-    const firstNDCCountriesAndParties = getCountriesAndParties(firstNDCIsos);
-
-    const secondNDCIsos = Object.keys(countriesDocuments).filter(iso =>
-      countriesDocuments[iso].some(
-        doc => doc.slug === 'second_ndc' && !!doc.submission_date
-      )
+    if (!submittedIndicator) return null;
+    const submittedIsos = Object.keys(submittedIndicator.locations).filter(
+      iso => submittedIndicator.locations[iso].label_slug === 'submitted_2020'
     );
-    const secondNDCCountriesAndParties = getCountriesAndParties(secondNDCIsos);
+    if (!submittedIsos.length) return null;
+    const submittedCountriesAndParties = getCountriesAndParties(submittedIsos);
 
     return [
       {
-        value: firstNDCCountriesAndParties.partiesNumber,
-        description: ` Parties have submitted their first NDC, representing ${firstNDCCountriesAndParties.countriesNumber} countries`
-      },
-      {
-        value: secondNDCCountriesAndParties.partiesNumber,
-        description: ` Part${
-          secondNDCCountriesAndParties.partiesNumber === 1
-            ? 'y has'
-            : 'ies have'
-        } submitted their second NDC, representing ${
-          secondNDCCountriesAndParties.countriesNumber
-        } countries`
+        value: submittedCountriesAndParties.partiesNumber,
+        description: ` Parties have submitted their 2020 NDC, representing ${submittedCountriesAndParties.countriesNumber} countries`
       }
     ];
   }

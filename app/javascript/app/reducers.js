@@ -3,6 +3,7 @@ import { combineReducers } from 'redux';
 import { handleActions } from 'app/utils/redux';
 
 // Providers
+import * as NDCSProvider from 'providers/ndcs-provider';
 import * as loginProvider from 'providers/login-provider';
 import * as countriesProvider from 'providers/countries-provider';
 import * as regionsProvider from 'providers/regions-provider';
@@ -41,8 +42,10 @@ import * as agricultureMeatTradeProvider from 'providers/agriculture-meat-trade-
 import * as agricultureWorldMeatTradeProvider from 'providers/agriculture-world-meat-trade-provider';
 import * as ndcCompareAllTargetsProvider from 'providers/ndc-compare-all-targets-provider';
 import * as customCompareAccordionProvider from 'providers/custom-compare-accordion-provider';
+import * as keyVisualizationsProvider from 'providers/key-visualizations-provider';
 
 const providersReducers = {
+  ndcs: handleActions(NDCSProvider),
   login: handleActions(loginProvider),
   countries: handleActions(countriesProvider),
   regions: handleActions(regionsProvider),
@@ -82,21 +85,22 @@ const providersReducers = {
   meatTrade: handleActions(agricultureMeatTradeProvider),
   meatWorldTrade: handleActions(agricultureWorldMeatTradeProvider),
   compareAll: handleActions(ndcCompareAllTargetsProvider),
-  customCompareAccordion: handleActions(customCompareAccordionProvider)
+  customCompareAccordion: handleActions(customCompareAccordionProvider),
+  keyVisualizations: handleActions(keyVisualizationsProvider)
 };
 
 // Pages
-import * as NDCSPage from 'pages/ndcs';
 import * as NDCSEnhancementsPage from 'pages/ndcs-enhancements';
 import * as LTSPage from 'pages/lts-explore';
+import * as NetZeroPage from 'pages/net-zero';
 import * as countryNDCFullPage from 'pages/ndc-country-full';
 import * as ndcSearchPage from 'pages/ndc-search';
 import * as myCWEditor from 'pages/my-climate-watch/my-cw-editor';
 
 const pagesReducers = {
-  ndcs: handleActions(NDCSPage),
   ndcsEnhancements: handleActions(NDCSEnhancementsPage),
   LTS: handleActions(LTSPage),
+  NetZero: handleActions(NetZeroPage),
   countryNDCFull: handleActions(countryNDCFullPage),
   ndcSearch: handleActions(ndcSearchPage),
   myCWEditor: handleActions(myCWEditor)

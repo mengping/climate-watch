@@ -46,7 +46,7 @@ RSpec.describe Api::V1::Data::LtsContentController, type: :controller do
       get :download
       expect(response.content_type).to eq('application/zip')
       expect(response.headers['Content-Disposition']).
-        to eq('attachment; filename="ndc_content.zip"')
+        to eq('attachment; filename="lts_content.zip"')
     end
   end
 

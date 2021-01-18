@@ -18,12 +18,34 @@ export const getTotalCountriesNumber = state =>
 const getFirstNDCSubmittedIsos = createSelector(
   [getSource, getCountriesDocuments, getAnswerLabel],
   (source, countriesDocuments, answerLabel) => {
-    if (!source || source !== 'countriesDocuments' || !countriesDocuments) { return null; }
-    return Object.keys(countriesDocuments).filter(iso =>
+    if (!source || source !== 'countriesDocuments' || !countriesDocuments) {
+      return null;
+    }
+    const firstNDCSubmittedIsos = Object.keys(countriesDocuments).filter(iso =>
       countriesDocuments[iso].some(
         doc => doc.slug === answerLabel && doc.submission_date
       )
     );
+    return firstNDCSubmittedIsos;
+  }
+);
+
+const getSecondNDCSubmittedIsos = createSelector(
+  [getSource, getIndicators],
+  (source, indicators) => {
+    if (!source || source !== 'submittedSecondNDCLabel' || !indicators) {
+      return null;
+    }
+    const submittedIndicator = indicators.find(
+      ind => ind.slug === 'ndce_status_2020'
+    );
+    if (!submittedIndicator) return null;
+
+    const submittedIsos = Object.keys(submittedIndicator.locations).filter(
+      iso => submittedIndicator.locations[iso].label_slug === 'submitted_2020'
+    );
+
+    return submittedIsos;
   }
 );
 
@@ -35,17 +57,20 @@ const getLSEIsos = createSelector(
   }
 );
 
-const getPositiveAnswerIsos = createSelector(
-  [
-    getIndicators,
-    getSlug,
-    getAnswerLabel,
-    getFirstNDCSubmittedIsos,
-    getLSEIsos
-  ],
-  (indicators, slug, answerLabel, firstNDCSubmittedIsos, lseIsos) => {
+const getOtherSourceIsos = createSelector(
+  [getFirstNDCSubmittedIsos, getSecondNDCSubmittedIsos, getLSEIsos],
+  (firstNDCSubmittedIsos, secondNDCSubmittedIsos, lseIsos) => {
     if (firstNDCSubmittedIsos) return firstNDCSubmittedIsos;
+    if (secondNDCSubmittedIsos) return secondNDCSubmittedIsos;
     if (lseIsos) return lseIsos;
+    return null;
+  }
+);
+
+const getPositiveAnswerIsos = createSelector(
+  [getIndicators, getSlug, getAnswerLabel, getOtherSourceIsos],
+  (indicators, slug, answerLabel, otherSourceIsos) => {
+    if (otherSourceIsos) return otherSourceIsos;
     if (!indicators || !slug || !answerLabel) return null;
     const indicator = indicators.find(i => i.slug === slug);
     if (!indicator) return null;
@@ -99,7 +124,7 @@ export const getEmissionsPercentage = createSelector(
 export const getQuestionStats = createSelector(
   [getTotalCountriesNumber, getPositiveAnswerIsos, getEmissionsPercentage],
   (maxPartiesNumber, positiveAnswerIsos, emissionPercentage) => {
-    if (!positiveAnswerIsos) return null;
+    if (!positiveAnswerIsos || !positiveAnswerIsos.length) return null;
     return {
       answerNumber: positiveAnswerIsos.length,
       maxPartiesNumber,

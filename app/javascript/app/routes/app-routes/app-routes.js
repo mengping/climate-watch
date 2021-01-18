@@ -12,7 +12,6 @@ import NDCCountry from 'pages/ndc-country';
 import LTSCountry from 'pages/lts-country';
 import NDCCompare from 'pages/ndc-compare';
 import NDCCompareAll from 'pages/ndc-compare-all-targets';
-import NDCS from 'pages/ndcs';
 import NDCSEnhancements from 'pages/ndcs-enhancements';
 import NDCSDG from 'pages/ndc-sdg';
 import Country from 'pages/country';
@@ -27,9 +26,11 @@ import EmissionPathwaysScenario from 'pages/emission-pathways-scenario';
 import Sectors from 'pages/sectors';
 import SectorsAgriculture from 'pages/sectors-agriculture';
 import LTSExplore from 'pages/lts-explore';
+import NetZero from 'pages/net-zero';
 import NDCSExplore from 'pages/ndcs-explore';
 import NdcOverview from 'pages/ndc-overview';
 import CustomCompare from 'pages/custom-compare';
+import KeyVisualizations from 'pages/key-visualizations/key-visualizations-component';
 
 import { HEADER_GRADIENTS, HEADER_COLORS } from 'styles/constants';
 
@@ -38,7 +39,6 @@ import NDCSRoutes from './NDCS-routes';
 import NDCCountryRoutes from './NDCCountry-routes';
 import LTSCountryRoutes from './LTSCountry-routes';
 import NDCCompareRoutes from './NDCCompare-routes';
-import NDCSContentRoutes from './NDCSContent-routes';
 import MyCwRoutes from './my-cw-routes';
 import DataExplorerRoutes from './data-explorer-routes';
 import AboutRoutes from './about-routes';
@@ -57,15 +57,9 @@ import countryCompareSections from './country-compare-sections';
 import agricultureSections from './sectors-agriculture-sections';
 import ndcsEnhancementsSections from './ndcs-enhancements-sections';
 import LTSExploreSections from './lts-explore-sections';
+import NetZeroSections from './net-zero-sections';
 import NDCSExploreSections from './ndcs-explore-sections';
 import NDCOverviewRoutes from './ndcs-overview-routes';
-
-const FEATURE_AGRICULTURE = process.env.FEATURE_AGRICULTURE === 'true';
-const FEATURE_NDC_EXPLORE = process.env.FEATURE_NDC_EXPLORE === 'true';
-const FEATURE_ALL_COMMITMENTS_MENU_ITEMS =
-  process.env.FEATURE_ALL_COMMITMENTS_MENU_ITEMS === 'true';
-const FEATURE_COMMITMENTS_OVERVIEW =
-  process.env.FEATURE_COMMITMENTS_OVERVIEW === 'true';
 
 // Main pages have a gradient header color and secondary have a single color
 export default [
@@ -92,31 +86,23 @@ export default [
     sections: countryCompareSections,
     headerColor: HEADER_COLORS.countries
   },
-  FEATURE_AGRICULTURE
-    ? {
-      nav: true,
-      label: 'SECTORS',
-      routes: sectorsRoutes
-    }
-    : {
-      path: '/sectors',
-      component: Sectors,
-      exact: true,
-      nav: true,
-      label: 'SECTORS'
-    },
-  FEATURE_AGRICULTURE && {
+  {
+    nav: true,
+    label: 'SECTORS',
+    routes: sectorsRoutes
+  },
+  {
     path: '/sectors/agriculture',
     component: SectorsAgriculture,
     sections: agricultureSections,
     headerGradient: HEADER_GRADIENTS.sectors
   },
-  FEATURE_AGRICULTURE && {
+  {
     path: '/sectors/coming-soon',
     component: Sectors,
     headerGradient: HEADER_GRADIENTS.sectors
   },
-  FEATURE_COMMITMENTS_OVERVIEW && {
+  {
     path: '/ndc-overview',
     component: NdcOverview,
     routes: NDCOverviewRoutes,
@@ -142,14 +128,19 @@ export default [
     routes: LTSCountryRoutes,
     headerColor: HEADER_COLORS.ndc
   },
-  FEATURE_COMMITMENTS_OVERVIEW && {
+  {
     path: '/compare-all-targets',
     component: NDCCompareAll,
     headerGradient: HEADER_GRADIENTS.commitments,
     headerColor: HEADER_COLORS.ndc
   },
-  (!FEATURE_COMMITMENTS_OVERVIEW || FEATURE_ALL_COMMITMENTS_MENU_ITEMS) && {
-    path: '/ndcs/compare',
+  {
+    path: '/key-visualizations',
+    component: KeyVisualizations,
+    headerGradient: HEADER_GRADIENTS.emissions
+  },
+  {
+    path: '/ndcs/compare', // Legacy: only for outdated links
     component: NDCCompare,
     headerGradient: HEADER_GRADIENTS.commitments,
     routes: NDCCompareRoutes,
@@ -161,25 +152,25 @@ export default [
     routes: NDCSRoutes
   },
   {
-    path: '/ndcs-content',
-    component: NDCS,
-    headerImage: 'ndc',
-    routes: NDCSContentRoutes,
-    headerGradient: HEADER_GRADIENTS.commitments
-  },
-  {
     path: '/lts-explore',
     component: LTSExplore,
     headerImage: 'ndc',
     sections: LTSExploreSections,
     headerGradient: HEADER_GRADIENTS.commitments
   },
-  FEATURE_NDC_EXPLORE && {
+  {
     path: '/ndcs-explore',
     component: NDCSExplore,
     headerImage: 'ndc',
     sections: NDCSExploreSections,
     headerGradient: HEADER_GRADIENTS.commitments
+  },
+  {
+    path: '/net-zero-tracker',
+    component: NetZero,
+    sections: NetZeroSections,
+    headerGradient: HEADER_GRADIENTS.commitments,
+    headerColor: HEADER_COLORS.ndc
   },
   {
     path: '/2020-ndc-tracker',
@@ -194,7 +185,7 @@ export default [
     exact: true,
     headerGradient: HEADER_GRADIENTS.commitments
   },
-  FEATURE_COMMITMENTS_OVERVIEW && {
+  {
     path: '/custom-compare',
     component: CustomCompare,
     routes: CustomCompareRoutes,
@@ -292,6 +283,10 @@ export default [
   {
     path: '/data-explorer',
     label: 'DATA EXPLORER'
+  },
+  {
+    path: '/ndcs-content',
+    component: () => createElement(Redirect, { to: '/ndcs-explore' })
   },
   {
     path: '/lts-tracker',

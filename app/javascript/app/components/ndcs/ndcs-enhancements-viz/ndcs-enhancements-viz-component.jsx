@@ -1,3 +1,4 @@
+/* eslint-disable react/no-danger */
 import React from 'react';
 import PropTypes from 'prop-types';
 import { TabletLandscape } from 'components/responsive';
@@ -5,9 +6,12 @@ import Map from 'components/map';
 import MapLegend from 'components/map-legend';
 import ButtonGroup from 'components/button-group';
 import Loading from 'components/loading';
+import Icon from 'components/icon';
+import infoIcon from 'assets/icons/info.svg';
 import ModalMetadata from 'components/modal-metadata';
 import CircularChart from 'components/circular-chart';
 import NDCSEnhancementsTooltip from 'components/ndcs/ndcs-enhancements-viz/ndcs-enhancements-tooltip';
+import ReactTooltip from 'react-tooltip';
 
 import styles from './ndcs-enhancements-viz-styles.scss';
 
@@ -16,9 +20,9 @@ const renderButtonGroup = (clickHandler, downloadLink) => (
     <div>
       <p>
         <em>
-          Explore the data to track which countries have signaled they will
-          update or enhance their national climate commitments (NDCs) by 2020.
-          To request changes or additions, please contact &nbsp;
+          Track which countries are updating or enhancing their national climate
+          commitments in 2020 or in the lead up to COP26. To request changes or
+          additions, please contact &nbsp;
           <a
             href="mailto:Rhys.Gerholdt@wri.org?subject=2020 NDC Tracker Update"
             target="_blank"
@@ -109,8 +113,26 @@ const NDCSEnhancementsViz = ({
           <div className={styles.containerUpper}>
             <div className={styles.containerCharts}>
               {!loading && summaryData && (
-                <div>
-                  {renderCircular(summaryData.intend_2020.countries)}
+                <div className={styles.summary}>
+                  <div
+                    data-tip
+                    data-for="covid-update-tooltip"
+                    className={styles.summaryTitle}
+                  >
+                    COVID-19 Update
+                    <Icon icon={infoIcon} className={styles.infoIcon} />
+                  </div>
+                  <ReactTooltip
+                    id="covid-update-tooltip"
+                    className={styles.covidTooltip}
+                  >
+                    Some nations have signaled that the impacts of the
+                    coronavirus pandemic may delay their submission of updated
+                    or enhanced NDCs. While many will submit in 2020 as
+                    scheduled, some have indicated they may do so in 2021 ahead
+                    of COP26. The information below does not reflect these
+                    possible delays.
+                  </ReactTooltip>
                   {renderCircular(summaryData.enhance_2020.countries)}
                   {renderCircular(summaryData.submitted_2020.countries)}
                 </div>

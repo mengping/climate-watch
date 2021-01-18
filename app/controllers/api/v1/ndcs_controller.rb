@@ -55,36 +55,15 @@ module Api
       before_action :set_locations_documents, only: [:index]
 
       def index
-        # params[:source] -> one of ["CAIT", "LTS", "WB", "NDC Explorer", "Pledges"]
-        if params[:source].present?
-          source = ::Indc::Source.where(name: params[:source])
-        end
+        json = if index_cache_key.present?
+                 Rails.cache.fetch(index_cache_key, expires: 7.days) do
+                   index_json
+                 end
+               else
+                 index_json
+               end
 
-        categories = Rails.cache.fetch(categories_cache_key, expires: 7.days) do
-          filtered_categories(source)
-        end
-
-        indicators = Rails.cache.fetch(indicators_cache_key, expires: 7.days) do
-          filtered_indicators(source)
-        end
-
-        sectors = Rails.cache.fetch(sectors_cache_key, expires: 7.days) do
-          tmp_sectors = ::Indc::Sector.joins(values: :indicator).
-            where(indc_indicators: {id: indicators.map(&:id)}).distinct
-
-          parents = ::Indc::Sector.where(parent_id: nil).
-            joins("INNER JOIN indc_sectors AS children ON children.parent_id = indc_sectors.id").where(children: {id: tmp_sectors.pluck(:id).uniq})
-
-          ::Indc::Sector.from("(#{tmp_sectors.to_sql} UNION #{parents.to_sql}) AS indc_sectors")
-        end
-
-        render json: NdcIndicators.new(indicators, categories, sectors),
-               serializer: Api::V1::Indc::NdcIndicatorsSerializer,
-               locations_documents: @locations_documents,
-               location_list: location_list,
-               document: params[:document],
-               lse_data: get_lse_data,
-               filter: params[:filter]
+        render json: json
       end
 
       def content_overview
@@ -160,6 +139,54 @@ module Api
         ].join('_')
       end
 
+      def index_json
+        # params[:source] -> one of ["CAIT", "LTS", "WB", "NDC Explorer", "Pledges"]
+        if params[:source].present?
+          source = ::Indc::Source.where(name: params[:source])
+        end
+
+        categories = Rails.cache.fetch(categories_cache_key, expires: 7.days) do
+          filtered_categories(source)
+        end
+
+        indicators = Rails.cache.fetch(indicators_cache_key, expires: 7.days) do
+          filtered_indicators(source)
+        end
+
+        sectors = Rails.cache.fetch(sectors_cache_key, expires: 7.days) do
+          tmp_sectors = ::Indc::Sector.joins(values: :indicator).
+            where(indc_indicators: {id: indicators.map(&:id)}).distinct
+
+          parents = ::Indc::Sector.where(parent_id: nil).
+            joins("INNER JOIN indc_sectors AS children ON children.parent_id = indc_sectors.id").where(children: {id: tmp_sectors.pluck(:id).uniq})
+
+          ::Indc::Sector.from("(#{tmp_sectors.to_sql} UNION #{parents.to_sql}) AS indc_sectors")
+        end
+
+        Api::V1::Indc::NdcIndicatorsSerializer.new(
+          NdcIndicators.new(indicators, categories, sectors),
+          locations_documents: @locations_documents,
+          location_list: location_list,
+          document: params[:document],
+          lse_data: get_lse_data,
+          filter: params[:filter]
+        ).to_json
+      end
+
+      def index_cache_key
+        return if params[:location].present?
+        return if params[:locations_documents].present?
+        return if params[:document].present?
+        return if params[:category].present?
+        return if params[:subcategory].present?
+        return if params[:indicators].present?
+
+        [
+          request.url,
+          ::Indc::Indicator.maximum(:updated_at).to_s # to be sure its reloaded after any import
+        ].join('_')
+      end
+
       def location_list
         if params[:location].blank?
           nil
@@ -174,6 +201,7 @@ module Api
         @locations_documents = params[:locations_documents].split(',').map do |loc_doc|
           loc_doc.split('-')
         end
+        @locations_documents.reject! { |ld| ld.first == 'undefined' }
 
         lse_documents_prefixes = %w(framework sectoral)
 
@@ -207,25 +235,14 @@ module Api
         end
 
         if params[:document].present?
-          indicators = indicators.joins(values: [:document]).where(values: {indc_documents: {slug: [params[:document], nil]}})
+          # this needs to be a left join, otherwise we're missing indicators which do not have a document attached
+          # which is what the where condition is about
+          # for example, indicators under Overview -> UNFCCC Process, e.g. pa_status
+          # whose values come from NDC_single_version data file
+          indicators = indicators.left_joins(values: [:document]).where(values: {indc_documents: {slug: [params[:document], nil]}})
         end
 
         indicators = indicators.where(source_id: source.map(&:id)) if source
-
-        if @indc_locations_documents
-          # TODO: do not understand why below are needed
-          # if indicator belongs to many cateogires then only one will be in category_ids
-          # that's why I'm going to reset the query at the end
-          indicators = indicators.select('DISTINCT ON(COALESCE("normalized_slug", indc_indicators.slug)) indc_indicators.*')
-          indicators = indicators.joins(values: [:location, :document]). #
-            where(locations: {iso_code3: @indc_locations_documents.map(&:first)},
-                  indc_documents: {slug: @indc_locations_documents.map(&:second)})
-        elsif @lse_locations_documents
-          indicators = indicators.select('DISTINCT ON(COALESCE("normalized_slug", indc_indicators.slug)) indc_indicators.*')
-          indicators = indicators.joins(values: [:location]).
-            where(normalized_slug: LSE_INDICATORS_MAP.keys.map(&:to_s)).
-            where(locations: {iso_code3: @lse_locations_documents.map(&:first)})
-        end
 
         if params[:indicators].present?
           indicators = indicators.where(slug: params[:indicators].split(','))
@@ -241,6 +258,34 @@ module Api
 
         if params[:subcategory].present?
           indicators = indicators.joins(:categories).where(indc_categories: {slug: params[:subcategory]})
+        end
+
+        if @lse_locations_documents
+          lse_indicators = indicators.
+            joins(:categories).
+            where("indc_indicators.slug LIKE 'lse_%'")
+        end
+
+        if @indc_locations_documents
+          # if indicator belongs to many cateogires then only one will be in category_ids
+          # that's why I'm going to reset the query at the end
+          indicators = indicators.select('DISTINCT ON(COALESCE("normalized_slug", indc_indicators.slug)) indc_indicators.*')
+          document_location_sql = @indc_locations_documents.map do
+            '(locations.iso_code3 = ? AND indc_documents.slug = ?)'
+          end.join(' OR ')
+          document_location_args = @indc_locations_documents.flatten
+
+          indicators = indicators.
+            joins(values: [:location, :document]).
+            where(document_location_sql, *document_location_args)
+
+          if lse_indicators
+            indicators = ::Indc::Indicator.
+              select('DISTINCT ON(COALESCE("normalized_slug", indc_indicators.slug)) indc_indicators.*').
+              from("(#{indicators.to_sql} UNION #{lse_indicators.to_sql}) AS indc_indicators")
+          end
+        elsif lse_indicators
+          indicators = lse_indicators
         end
 
         # to not break distinct on clause

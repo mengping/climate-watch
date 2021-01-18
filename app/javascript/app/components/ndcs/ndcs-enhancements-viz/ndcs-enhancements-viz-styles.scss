@@ -58,6 +58,14 @@
   }
 }
 
+.summary {
+  min-height: 300px;
+
+  @media #{$tablet-landscape} {
+    min-height: 500px;
+  }
+}
+
 :global .__react_component_tooltip {
   max-width: 250px;
   white-space: pre-line;
@@ -122,6 +130,23 @@
       @include columns(100%);
     }
   }
+}
+
+.summaryTitle {
+  font-weight: $font-weight-bold;
+  text-align: center;
+  margin-top: 20px;
+  padding-bottom: 20px;
+  cursor: default;
+}
+
+.infoIcon {
+  margin-left: 5px;
+  transform: translateY(1px);
+}
+
+.covidTooltip {
+  line-height: $line-height-medium;
 }
 
 .circularChartContainer {

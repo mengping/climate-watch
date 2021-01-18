@@ -13,8 +13,8 @@ import compareSubmittedIcon from 'assets/icons/compare-submitted.svg';
 import compareNotSubmittedIcon from 'assets/icons/compare-not-submitted.svg';
 import compareIntendsIcon from 'assets/icons/compare-intends.svg';
 import Search from 'components/search';
-import { NCS_COMPARE_ALL } from 'data/SEO';
-import { MetaDescription, SocialMetadata } from 'components/seo';
+import { SEO_PAGES } from 'data/seo';
+import SEOTags from 'components/seo-tags';
 import NdcCompareAllTargetsProvider from 'providers/ndc-compare-all-targets-provider';
 import CountriesDocumentsProvider from 'providers/countries-documents-provider';
 import ModalMetadata from 'components/modal-metadata';
@@ -58,28 +58,22 @@ const NDCCompareAllTargets = props => {
     tableData,
     noContentMsg,
     columns,
-    setColumnWidth,
     handleTargetsChange,
     selectedTargets,
     selectedTableTargets,
-    handleInfoClick
+    handleInfoClick,
+    titleLinks,
+    countryIsos
   } = props;
   return (
     <React.Fragment>
-      <MetaDescription
-        descriptionContext={NCS_COMPARE_ALL}
-        subtitle="NDCS CONTENT"
-      />
-      <SocialMetadata
-        descriptionContext={NCS_COMPARE_ALL}
-        href={location.href}
-      />
+      <SEOTags page={SEO_PAGES.ndcCompareAll} href={location.href} />
       <Header route={route}>
         <div className={cx(layout.content, styles.header)}>
           <div className={styles.title}>
             <Intro
               title="Compare all targets"
-              description={`It is important for countries’ various commitments, laws and policies align to achieve their climate objectives. Explore a summary of which countries have each type of documents and compare all of them side-by-side. You can also <a href='https://climate-laws.org/' class=${styles.link}> explore climate laws and policies of the world published by Grantham Research Institute</a>.`}
+              description={`It is important for countries’ various commitments, laws and policies align to achieve their climate objectives. Explore a summary of which countries have each type of document and compare all of them side-by-side. You can also <a href='https://climate-laws.org/' class=${styles.link}> explore countries’ climate laws and policies published by Grantham Research Institute</a>.`}
             />
           </div>
         </div>
@@ -134,9 +128,10 @@ const NDCCompareAllTargets = props => {
           <CompareAllTable
             loading={loading}
             tableData={tableData}
+            titleLinks={titleLinks}
+            countryIsos={countryIsos}
             noContentMsg={noContentMsg}
             columns={columns}
-            setColumnWidth={setColumnWidth}
             selectedTargets={selectedTableTargets}
             setSelectedTargets={handleTargetsChange}
           />
@@ -153,13 +148,14 @@ NDCCompareAllTargets.propTypes = {
   route: PropTypes.object.isRequired,
   loading: PropTypes.bool,
   tableData: PropTypes.array,
+  titleLinks: PropTypes.array,
+  countryIsos: PropTypes.object,
   query: PropTypes.string,
   handleSearchChange: PropTypes.func.isRequired,
   handleInfoClick: PropTypes.func.isRequired,
   handleTargetsChange: PropTypes.func.isRequired,
   noContentMsg: PropTypes.string,
   columns: PropTypes.array,
-  setColumnWidth: PropTypes.func.isRequired,
   location: PropTypes.object,
   selectedTargets: PropTypes.array,
   selectedTableTargets: PropTypes.array

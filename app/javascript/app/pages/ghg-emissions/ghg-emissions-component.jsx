@@ -5,14 +5,10 @@ import PropTypes from 'prop-types';
 import Header from 'components/header';
 import Intro from 'components/intro';
 import GhgEmissionsGraph from 'components/ghg-emissions';
-import { HISTORICAL_GHG_EMISIONS } from 'data/SEO';
-import { MetaDescription, SocialMetadata } from 'components/seo';
 import { isPageContained } from 'utils/navigation';
 
 import layout from 'styles/layout.scss';
 import styles from './ghg-emissions-styles.scss';
-
-const FEATURE_NEW_GHG = process.env.FEATURE_NEW_GHG === 'true';
 
 class GhgEmissions extends PureComponent {
   // eslint-disable-line react/prefer-stateless-function
@@ -21,9 +17,7 @@ class GhgEmissions extends PureComponent {
     // Intro component is parsing html from the description so a react component won't work here
     const renderLink = (text, title, link) =>
       `<a href=${link} title="${title}">${text}</a>`;
-    const description =
-      FEATURE_NEW_GHG &&
-      `Greenhouse gas (GHG) emissions which cause climate change
+    const description = `Greenhouse gas (GHG) emissions which cause climate change
       ${renderLink(
     'have increased 50 fold since the mid-1800s.',
     'Greenhouse gas (GHG) emissions which cause climate change have increased 50 fold since the mid-1800s.',
@@ -47,14 +41,6 @@ class GhgEmissions extends PureComponent {
 
     return (
       <div>
-        <MetaDescription
-          descriptionContext={HISTORICAL_GHG_EMISIONS}
-          subtitle="GHG emissions"
-        />
-        <SocialMetadata
-          descriptionContext={HISTORICAL_GHG_EMISIONS}
-          href={location.href}
-        />
         {!isPageContained && (
           <Header route={route}>
             <div className={cx(layout.content, styles.header)}>

@@ -4,6 +4,8 @@ import cx from 'classnames';
 import Sticky from 'react-stickynode';
 import Loading from 'components/loading';
 import { TabletLandscape } from 'components/responsive';
+import { SEO_PAGES } from 'data/seo';
+import SEOTags from 'components/seo-tags';
 
 import BackButton from 'components/back-button';
 import Header from 'components/header';
@@ -17,8 +19,6 @@ import NdcsAutocompleteSearch from 'components/ndcs/ndcs-autocomplete-search';
 
 import accordionTheme from 'styles/themes/accordion/accordion-ndc-search.scss';
 import styles from './ndc-search-styles.scss';
-
-const FEATURE_NDC_EXPLORE = process.env.FEATURE_NDC_EXPLORE === 'true';
 
 class SearchPage extends PureComponent {
   render() {
@@ -34,11 +34,14 @@ class SearchPage extends PureComponent {
     const hasNoContent = !results && !loading;
     return (
       <div className={styles.page}>
+        <SEOTags
+          page={SEO_PAGES.ndcSearch}
+          dynamicTitlePart={search && search.query}
+          href={location.href}
+        />
         <Header route={route}>
           <div className={styles.headerCols}>
-            {FEATURE_NDC_EXPLORE && (
-              <BackButton pathname="/ndcs-explore" backLabel="Explore NDCs" />
-            )}
+            <BackButton pathname="/ndcs-explore" backLabel="Explore NDCs" />
             <Intro className={styles.intro} title="NDC Search" />
             <NdcsAutocompleteSearch
               className={styles.select}

@@ -36,11 +36,11 @@ import dropdownTheme from 'styles/themes/dropdown/react-selectize.scss';
 import multiSelectTheme from 'styles/themes/dropdown/multiselect-dropdown.scss';
 import multiLevelDropdownTheme from 'styles/themes/dropdown/multi-level-dropdown.scss';
 import legendChartTheme from 'styles/themes/chart/legend-chart.scss';
+import { SEO_PAGES } from 'data/seo';
+import SEOTags from 'components/seo-tags';
 import DataZoom from './data-zoom';
 
 import styles from './ghg-emissions-styles.scss';
-
-const FEATURE_NEW_GHG = process.env.FEATURE_NEW_GHG === 'true';
 
 const icons = {
   'Line chart': lineIcon,
@@ -98,29 +98,9 @@ function GhgEmissions(props) {
     downloadLink,
     dataZoomYears,
     dataZoomPosition,
-    setDataZoomPosition
+    setDataZoomPosition,
+    dynamicSEOTitlePart
   } = props;
-
-  const buttonGroupConfig = [
-    {
-      type: 'info',
-      onClick: handleInfoClick
-    },
-    {
-      type: 'download',
-      section: 'ghg-emissions',
-      link: downloadLink,
-      tooltipText: 'View or download raw data'
-    },
-    {
-      type: 'downloadCSV',
-      tooltipText: 'Download data in csv',
-      onClick: handleDownloadModalOpen
-    },
-    {
-      type: 'addToUser'
-    }
-  ];
 
   const buttonGroupGHGemissions = [
     {
@@ -215,12 +195,7 @@ function GhgEmissions(props) {
 
   const renderChart = () => {
     const { chartTypeSelected } = selectedOptions;
-
-    const anyFilterConflicts = !!(
-      filtersConflicts && filtersConflicts.conflicts.length
-    );
-
-    if (!providerFilters) {
+    if (!loading && !providerFilters) {
       return (
         <div className={styles.messageContainer}>
           <div>
@@ -230,7 +205,9 @@ function GhgEmissions(props) {
       );
     }
 
-    if (anyFilterConflicts) {
+    const hasFilterConflicts =
+      !loading && !!(filtersConflicts && filtersConflicts.conflicts.length);
+    if (hasFilterConflicts) {
       return (
         <div className={styles.messageContainer}>
           <div>
@@ -248,8 +225,9 @@ function GhgEmissions(props) {
 
     const tableDataReady = !loading && tableData && tableData.length;
     const isPercentageChangeCalculation =
+      !loading &&
       selectedOptions.calculationSelected.value ===
-      GHG_CALCULATION_OPTIONS.PERCENTAGE_CHANGE.value;
+        GHG_CALCULATION_OPTIONS.PERCENTAGE_CHANGE.value;
 
     const percentageChangeCustomLabelFormat = value => {
       if (value === undefined) {
@@ -273,16 +251,15 @@ function GhgEmissions(props) {
     ); // format thousands with two fixed decimals
 
     const customLabelFormat = value => {
-      if (value > 1000000000) {
+      if (value > 1000000000 || value < -1000000000) {
         return billionsFormat(value);
-      } else if (value > 1000000) {
+      } else if (value > 1000000 || value < -1000000) {
         return millionsFormat(value);
-      } else if (value > 1000) {
+      } else if (value > 1000 || value > -1000) {
         return thousandsFormat(value);
       }
       return format('.2f')(value);
     };
-
     return (
       <React.Fragment>
         <Chart
@@ -315,7 +292,6 @@ function GhgEmissions(props) {
             />
           }
           dataZoomComponent={
-            FEATURE_NEW_GHG &&
             !loading && (
               <DataZoom
                 data={dataZoomData}
@@ -349,14 +325,16 @@ function GhgEmissions(props) {
   const renderButtonGroup = () => (
     <ButtonGroup
       className={styles.buttonGroup}
-      buttonsConfig={
-        FEATURE_NEW_GHG ? buttonGroupGHGemissions : buttonGroupConfig
-      }
+      buttonsConfig={buttonGroupGHGemissions}
     />
   );
-
   return (
     <div>
+      <SEOTags
+        page={SEO_PAGES.ghg}
+        href={location.href}
+        dynamicTitlePart={dynamicSEOTitlePart}
+      />
       <div
         className={cx(styles.titleContainer, {
           [styles.containedButtonGroup]: isPageContained
@@ -374,40 +352,27 @@ function GhgEmissions(props) {
             sharePath={'/ghg-emissions'}
           />
         </TabletLandscape>
-        {FEATURE_NEW_GHG && (
-          <p className={styles.bodyText}>
-            Explore GHG emissions from multiple data source (CAIT, PIK, UNFCCC,
-            GCP) and understand their differences in the{' '}
-            <a className={styles.link} href="about/faq/ghg">
-              FAQ
-            </a>
-          </p>
-        )}
+        <p className={styles.bodyText}>
+          Explore GHG emissions from multiple data source (CAIT, PIK, UNFCCC,
+          GCP) and understand their differences in the{' '}
+          <a className={styles.link} href="about/faq/ghg">
+            FAQ
+          </a>
+        </p>
       </div>
       <WorldBankDataProvider />
       <RegionsProvider includeGHGSources />
       <EmissionsMetaProvider />
       {providerFilters && <EmissionsProvider filters={providerFilters} />}
-      <div className={cx(styles.col4, { [styles.newGHG]: FEATURE_NEW_GHG })}>
+      <div className={cx(styles.col4, styles.newGHG)}>
         {renderDropdown('Data Source', 'sources')}
-        {FEATURE_NEW_GHG ? (
-          <GhgMultiselectDropdown
-            label={'Countries/Regions'}
-            groups={regionGroups}
-            options={options.regions || []}
-            values={getValues(selectedOptions.regionsSelected)}
-            onSelectionChange={selected => handleChange('regions', selected)}
-          />
-        ) : (
-          <Multiselect
-            label={'Countries/Regions'}
-            groups={regionGroups}
-            options={options.regions || []}
-            values={getValues(selectedOptions.regionsSelected)}
-            onValueChange={selected => handleChange('regions', selected)}
-            theme={multiSelectTheme}
-          />
-        )}
+        <GhgMultiselectDropdown
+          label={'Countries/Regions'}
+          groups={regionGroups}
+          options={options.regions || []}
+          values={getValues(selectedOptions.regionsSelected)}
+          onSelectionChange={selected => handleChange('regions', selected)}
+        />
         <MultiLevelDropdown
           label="Sectors/Subsectors"
           optGroups={sectorGroups}
@@ -425,7 +390,7 @@ function GhgEmissions(props) {
           onValueChange={selected => handleChange('gases', selected)}
           theme={multiSelectTheme}
         />
-        {FEATURE_NEW_GHG && renderDropdown('Calculations', 'calculation')}
+        {renderDropdown('Calculations', 'calculation')}
         {renderDropdown('Show data by', 'breakBy')}
         {renderDropdown(null, 'chartType', icons, {
           variant: 'icons-labels',
@@ -480,6 +445,7 @@ GhgEmissions.propTypes = {
   hideRemoveOptions: PropTypes.bool,
   dataZoomPosition: PropTypes.object,
   dataZoomYears: PropTypes.object,
+  dynamicSEOTitlePart: PropTypes.string,
   setDataZoomPosition: PropTypes.func.isRequired
 };
 

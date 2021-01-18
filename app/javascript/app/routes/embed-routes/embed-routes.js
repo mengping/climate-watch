@@ -1,7 +1,6 @@
 import { createElement } from 'react';
 import { Redirect } from 'react-router-dom';
 
-import NDCMap from 'components/ndcs/ndcs-map';
 import NDCSEnhancementsViz from 'components/ndcs/ndcs-enhancements-viz';
 import GhgEmissionsGraph from 'components/ghg-emissions';
 import CompareGhgChart from 'components/compare/compare-ghg-chart';
@@ -17,15 +16,12 @@ import AgricultureEmissionPieChart from 'components/sectors-agriculture/drivers-
 import CountriesContext from 'components/sectors-agriculture/countries-context';
 import CountriesActions from 'components/sectors-agriculture/countries-actions';
 import LTSExploreMap from 'components/ndcs/lts-explore-map';
+import NetZeroMap from 'components/ndcs/net-zero-map';
 import NDCSExploreMap from 'components/ndcs/ndcs-explore-map';
 import NDCOverviewSection from 'components/ndcs/ndcs-overview-section';
+import KeyVisualizationsTable from 'components/key-visualizations/key-visualizations-table';
 
 export default [
-  {
-    path: '/embed/ndcs',
-    component: NDCMap,
-    exact: true
-  },
   {
     path: '/embed/2020-ndc-tracker',
     component: NDCSEnhancementsViz,
@@ -34,6 +30,11 @@ export default [
   {
     path: '/embed/lts-explore',
     component: LTSExploreMap,
+    exact: true
+  },
+  {
+    path: '/embed/net-zero-tracker',
+    component: NetZeroMap,
     exact: true
   },
   {
@@ -49,6 +50,11 @@ export default [
   {
     path: '/embed/compare-ghg-chart',
     component: CompareGhgChart,
+    exact: true
+  },
+  {
+    path: '/embed/key-visualizations',
+    component: KeyVisualizationsTable,
     exact: true
   },
   {

@@ -4,18 +4,19 @@ import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import qs from 'query-string';
 import { getLocationParamUpdated } from 'utils/navigation';
-import { setColumnWidth as setColumnWidthUtil } from 'utils/table';
 import { actions as modalMetadataActions } from 'components/modal-metadata';
 import NDCCompareAllComponent from './ndc-compare-all-targets-component';
 
 import {
-  getFilteredDataBySearch,
+  getRemoveISOfromData,
   getColumns,
   getLoading,
   getSearch,
   getSelectedTargets,
   getSelectedTableTargets,
-  getQuery
+  getTitleLinks,
+  getQuery,
+  getCountryIsos
 } from './ndc-compare-all-targets-selectors';
 
 const mapStateToProps = (state, { location }) => {
@@ -23,28 +24,20 @@ const mapStateToProps = (state, { location }) => {
   return {
     loading: getLoading(state),
     query: getSearch(state, { search }),
-    tableData: getFilteredDataBySearch(state, { search }),
+    tableData: getRemoveISOfromData(state, { search }),
     columns: getColumns(state, {
       search
     }),
     selectedTargets: getSelectedTargets(state, { search }),
     selectedTableTargets: getSelectedTableTargets(state, { search }),
+    titleLinks: getTitleLinks(state, { search }),
+    countryIsos: getCountryIsos(state, { search }),
     queryParams: getQuery(state, { search })
   };
 };
 
 const NDCCompareAllContainer = props => {
-  const { history, location, columns, query, tableData } = props;
-
-  const setColumnWidth = column =>
-    setColumnWidthUtil({
-      column,
-      columns,
-      narrowColumnWidth: 115,
-      wideColumnWidth: 130,
-      narrowColumns: [0, 2, 3, 4, 5, 6, 7, 8, 9],
-      wideColumns: [1]
-    });
+  const { history, location, query, tableData } = props;
 
   const updateUrlParam = (param, clear) => {
     history.replace(getLocationParamUpdated(location, param, clear));
@@ -87,7 +80,6 @@ const NDCCompareAllContainer = props => {
     noContentMsg,
     handleSearchChange,
     tableData,
-    setColumnWidth,
     handleTargetsChange,
     handleInfoClick
   });
